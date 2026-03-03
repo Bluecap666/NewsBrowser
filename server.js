@@ -10,7 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
 
 // 中间件
 app.use(cors());
@@ -241,7 +242,10 @@ app.options('/api/proxy', (req, res) => {
   res.sendStatus(200);
 });
 
-app.listen(PORT, () => {
-  console.log(`服务器运行在 http://localhost:${PORT}`);
-  console.log(`访问地址：http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`服务器运行在 http://${HOST}:${PORT}`);
+  console.log(`本地访问：http://localhost:${PORT}`);
+  console.log(`外网访问：http://<服务器 IP>:${PORT}`);
+  console.log(`\n提示：如果无法访问，请检查防火墙设置`);
+  console.log(`Linux 防火墙命令：sudo ufw allow ${PORT}/tcp`);
 });
