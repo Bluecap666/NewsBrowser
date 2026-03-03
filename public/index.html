@@ -44,6 +44,65 @@
             font-size: 0.95em;
         }
 
+        .proxy-toggle {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .proxy-toggle label {
+            color: white;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .proxy-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .proxy-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #28a745;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
         .main-content {
             display: grid;
             grid-template-columns: 1fr;
@@ -358,6 +417,13 @@
         <div class="header">
             <h1>🌐 新闻浏览器</h1>
             <p>配置您的常用网站，一键快速访问</p>
+            <div class="proxy-toggle">
+                <label class="proxy-switch">
+                    <input type="checkbox" id="proxyToggle">
+                    <span class="slider"></span>
+                </label>
+                <label for="proxyToggle">启用代理（访问国外网站建议开启）</label>
+            </div>
             <button class="btn btn-primary" id="toggleSidebarBtn" style="margin-top: 10px; display: none;">📱 切换侧边栏</button>
         </div>
 
@@ -408,7 +474,9 @@
         const urlList = document.getElementById('urlList');
         const iframeContainer = document.getElementById('iframeContainer');
         const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+        const proxyToggle = document.getElementById('proxyToggle');
         let sidebarVisible = true;
+        let useProxy = false;
 
         // 加载 URL 列表
         async function loadUrls() {
@@ -466,13 +534,15 @@
 
         // 打开 URL
         function openUrl(url, name) {
+            const finalUrl = useProxy ? `/api/proxy?url=${encodeURIComponent(url)}` : url;
+            
             iframeContainer.innerHTML = `
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
-                    <p>正在加载 ${escapeHtml(name)}...</p>
+                    <p>正在加载 ${escapeHtml(name)}${useProxy ? ' (代理模式)' : ''}...</p>
                 </div>
                 <iframe 
-                    src="${escapeHtml(url)}" 
+                    src="${escapeHtml(finalUrl)}" 
                     frameborder="0"
                     onload="document.getElementById('loading')?.remove()"
                     onerror="handleIframeError('${escapeHtml(name)}', '${escapeHtml(url)}')"
@@ -495,7 +565,9 @@
                             <h3>加载超时</h3>
                             <p style="margin: 10px 0;">${escapeHtml(name)} 拒绝连接或加载时间过长</p>
                             <p style="font-size: 0.9em; color: #6c757d;">可能原因：该网站禁止在 iframe 中显示，或网络连接问题</p>
+                            ${useProxy ? '<p style="font-size: 0.85em; color: #28a745; margin-top: 10px;">✅ 当前已启用代理模式</p>' : ''}
                             <button onclick="window.open('${escapeHtml(url)}', '_blank')" class="btn btn-primary" style="margin-top: 10px;">在新窗口打开</button>
+                            ${!useProxy ? `<button onclick="document.getElementById('proxyToggle').click(); openUrl('${escapeHtml(url)}', '${escapeHtml(name)}')" class="btn btn-primary" style="margin-top: 10px; background: #28a745;">尝试启用代理访问</button>` : ''}
                         </div>
                     `;
                 }
@@ -645,7 +717,28 @@
             }
         }
 
-        // 移动端侧边栏切换
+        // 代理切换
+        if (proxyToggle) {
+            proxyToggle.addEventListener('change', (e) => {
+                useProxy = e.target.checked;
+                localStorage.setItem('useProxy', useProxy);
+                
+                // 如果当前有打开的网站，重新加载
+                const activeItem = document.querySelector('.url-item.active');
+                if (activeItem) {
+                    const url = activeItem.dataset.url;
+                    const name = activeItem.querySelector('.url-item-name').textContent;
+                    openUrl(url, name);
+                }
+            });
+
+            // 从本地存储恢复代理设置
+            const savedProxySetting = localStorage.getItem('useProxy');
+            if (savedProxySetting !== null) {
+                useProxy = savedProxySetting === 'true';
+                proxyToggle.checked = useProxy;
+            }
+        }
         if (toggleSidebarBtn && window.innerWidth < 768) {
             toggleSidebarBtn.addEventListener('click', () => {
                 const sidebar = document.querySelector('.sidebar');

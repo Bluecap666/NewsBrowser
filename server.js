@@ -3,6 +3,8 @@ import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
+import http from 'http';
+import https from 'https';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -153,6 +155,90 @@ app.get('/api/check-url', async (req, res) => {
       message: '无法访问该网站'
     });
   }
+});
+
+// API: 通过代理访问 URL（解决跨域和安全限制问题）
+app.get('/api/proxy', (req, res) => {
+  const targetUrl = req.query.url;
+  
+  if (!targetUrl) {
+    return res.status(400).json({ error: 'URL 不能为空' });
+  }
+
+  // 验证 URL 格式
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(targetUrl);
+  } catch (error) {
+    return res.status(400).json({ error: '无效的 URL 格式' });
+  }
+
+  // 只允许 http 和 https 协议
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    return res.status(403).json({ error: '只支持 HTTP 和 HTTPS 协议' });
+  }
+
+  const client = parsedUrl.protocol === 'https:' ? https : http;
+  
+  const options = {
+    hostname: parsedUrl.hostname,
+    port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+    path: parsedUrl.pathname + parsedUrl.search,
+    method: 'GET',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    },
+    timeout: 15000,
+    rejectUnauthorized: false // 忽略 SSL 证书错误
+  };
+
+  const proxyReq = client.request(options, (proxyRes) => {
+    // 设置响应头，允许跨域访问
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    
+    // 转发状态码
+    res.statusCode = proxyRes.statusCode;
+    
+    // 转发响应头（过滤一些不安全的头）
+    Object.keys(proxyRes.headers).forEach(key => {
+      if (key !== 'transfer-encoding' && key !== 'connection') {
+        res.setHeader(key, proxyRes.headers[key]);
+      }
+    });
+    
+    proxyRes.pipe(res);
+  });
+
+  proxyReq.on('error', (error) => {
+    console.error('代理请求错误:', error);
+    res.status(500).json({ 
+      error: '代理请求失败',
+      message: error.message 
+    });
+  });
+
+  proxyReq.on('timeout', () => {
+    proxyReq.abort();
+    res.status(504).json({ 
+      error: '网关超时',
+      message: '目标服务器响应超时' 
+    });
+  });
+
+  proxyReq.end();
+});
+
+// OPTIONS 预检请求
+app.options('/api/proxy', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendStatus(200);
 });
 
 app.listen(PORT, () => {
