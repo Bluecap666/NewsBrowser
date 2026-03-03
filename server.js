@@ -181,19 +181,44 @@ app.get('/api/proxy', (req, res) => {
 
   const client = parsedUrl.protocol === 'https:' ? https : http;
   
+  // 生成随机的浏览器标识，模拟真实用户访问
+  const randomChromeVersion = `${90 + Math.floor(Math.random() * 10)}.0.${4000 + Math.floor(Math.random() * 500)}.${100 + Math.floor(Math.random() * 200)}`;
+  const userAgents = [
+    `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${randomChromeVersion} Safari/537.36`,
+    `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${randomChromeVersion} Safari/537.36 Edg/${randomChromeVersion}`,
+    `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${randomChromeVersion} Safari/537.36`,
+  ];
+  
   const options = {
     hostname: parsedUrl.hostname,
     port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
     path: parsedUrl.pathname + parsedUrl.search,
     method: 'GET',
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+      'User-Agent': userAgents[Math.floor(Math.random() * userAgents.length)],
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Cache-Control': 'max-age=0',
+      'Sec-Ch-Ua': `" Not A;Brand";v="99", "Chromium";v="${randomChromeVersion.split('.')[0]}", "Google Chrome";v="${randomChromeVersion.split('.')[0]}"`,
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
     },
     timeout: 15000,
-    rejectUnauthorized: false // 忽略 SSL 证书错误
+    rejectUnauthorized: false, // 忽略 SSL 证书错误
+    agent: new https.Agent({ keepAlive: true }) // 使用长连接
   };
+  
+  // 如果是从其他网站跳转过来，添加 Referer
+  if (Math.random() > 0.5) {
+    options.headers['Referer'] = `https://www.google.com/search?q=${encodeURIComponent(parsedUrl.hostname)}`;
+  }
 
   const proxyReq = client.request(options, (proxyRes) => {
     // 设置响应头，允许跨域访问
