@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新闻浏览器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 15px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0;
+            min-height: 100vh;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                grid-template-columns: 350px 1fr;
+            }
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 15px;
+            border-right: 2px solid #e9ecef;
+            overflow-y: auto;
+            max-height: none;
+        }
+
+        @media (min-width: 768px) {
+            .sidebar {
+                padding: 20px;
+                max-height: calc(100vh - 100px);
+            }
+        }
+
+        .add-url-section {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .add-url-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .url-list {
+            list-style: none;
+        }
+
+        .url-item {
+            background: white;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .url-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .url-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .url-item-name {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .url-item-url {
+            font-size: 0.85em;
+            color: #6c757d;
+            word-break: break-all;
+        }
+
+        .url-item.active .url-item-url {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .url-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .url-item:hover .url-actions {
+            opacity: 1;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 16px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-check {
+            color: #28a745;
+        }
+
+        .btn-check:hover {
+            background: rgba(40, 167, 69, 0.1);
+        }
+
+        .btn-edit {
+            color: #ffc107;
+        }
+
+        .content-area {
+            padding: 0;
+            background: #fff;
+            position: relative;
+        }
+
+        #toggleSidebarBtn {
+            display: block !important;
+        }
+
+        @media (min-width: 768px) {
+            #toggleSidebarBtn {
+                display: none !important;
+            }
+        }
+
+        .iframe-container {
+            width: 100%;
+            height: calc(100vh - 100px);
+            position: relative;
+            background: #fff;
+        }
+
+        @media (min-width: 768px) {
+            .iframe-container {
+                height: calc(100vh - 120px);
+            }
+        }
+
+        .iframe-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            color: #6c757d;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .iframe-placeholder svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        @media (min-width: 768px) {
+            .iframe-placeholder svg {
+                width: 80px;
+                height: 80px;
+            }
+        }
+
+        .iframe-placeholder p {
+            font-size: 1em;
+        }
+
+        @media (min-width: 768px) {
+            .iframe-placeholder p {
+                font-size: 1.2em;
+            }
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        @media (max-width: 767px) {
+            body {
+                padding: 5px;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .header p {
+                font-size: 0.85em;
+            }
+
+            .form-group input {
+                padding: 8px;
+                font-size: 13px;
+            }
+
+            .btn {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+
+            .url-item-name {
+                font-size: 1em;
+            }
+
+            .url-item-url {
+                font-size: 0.75em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 新闻浏览器</h1>
+            <p>配置您的常用网站，一键快速访问</p>
+            <button class="btn btn-primary" id="toggleSidebarBtn" style="margin-top: 10px; display: none;">📱 切换侧边栏</button>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="add-url-section">
+                    <h3>➕ 添加新网站</h3>
+                    <form id="addUrlForm">
+                        <div class="form-group">
+                            <label for="siteName">网站名称</label>
+                            <input type="text" id="siteName" placeholder="例如：百度" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="siteUrl">网站地址</label>
+                            <input type="text" id="siteUrl" placeholder="例如：www.baidu.com" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">添加网站</button>
+                    </form>
+                </div>
+
+                <h3 style="margin-bottom: 15px; color: #495057;">📑 我的网站列表</h3>
+                <ul class="url-list" id="urlList">
+                    <!-- URL 列表将通过 JavaScript 动态加载 -->
+                </ul>
+            </div>
+
+            <div class="content-area">
+                <div class="iframe-container" id="iframeContainer">
+                    <div class="iframe-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        </svg>
+                        <p>点击左侧网站链接进行查看</p>
+                        <p style="font-size: 0.85em; margin-top: 10px; color: #ffc107;">⚠️ 部分网站可能因安全策略无法在 iframe 中显示</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        // DOM 元素
+        const addUrlForm = document.getElementById('addUrlForm');
+        const urlList = document.getElementById('urlList');
+        const iframeContainer = document.getElementById('iframeContainer');
+        const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+        let sidebarVisible = true;
+
+        // 加载 URL 列表
+        async function loadUrls() {
+            try {
+                const response = await fetch(`${API_BASE}/urls`);
+                const urls = await response.json();
+                renderUrlList(urls);
+            } catch (error) {
+                console.error('加载 URL 列表失败:', error);
+                alert('加载数据失败');
+            }
+        }
+
+        // 渲染 URL 列表
+        function renderUrlList(urls) {
+            if (urls.length === 0) {
+                urlList.innerHTML = `
+                    <li class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                        </svg>
+                        <p>暂无网站配置</p>
+                    </li>
+                `;
+                return;
+            }
+
+            urlList.innerHTML = urls.map(url => `
+                <li class="url-item" data-id="${url.id}" data-url="${url.url}">
+                    <div class="url-item-name">${escapeHtml(url.name)}</div>
+                    <div class="url-item-url">${escapeHtml(url.url)}</div>
+                    <div class="url-actions">
+                        <button class="btn-icon btn-edit" onclick="editUrl(event, ${url.id})" title="编辑">✏️</button>
+                        <button class="btn-icon btn-delete" onclick="deleteUrl(event, ${url.id})" title="删除">🗑️</button>
+                        <button class="btn-icon btn-check" onclick="checkUrl(event, '${escapeHtml(url.url)}', '${escapeHtml(url.name)}')" title="检查可用性">✅</button>
+                    </div>
+                </li>
+            `).join('');
+
+            // 为每个 URL 项添加点击事件
+            document.querySelectorAll('.url-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (!e.target.closest('.url-actions')) {
+                        const url = item.dataset.url;
+                        const name = item.querySelector('.url-item-name').textContent;
+                        openUrl(url, name);
+                        
+                        // 更新激活状态
+                        document.querySelectorAll('.url-item').forEach(i => i.classList.remove('active'));
+                        item.classList.add('active');
+                    }
+                });
+            });
+        }
+
+        // 打开 URL
+        function openUrl(url, name) {
+            iframeContainer.innerHTML = `
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>正在加载 ${escapeHtml(name)}...</p>
+                </div>
+                <iframe 
+                    src="${escapeHtml(url)}" 
+                    frameborder="0"
+                    onload="document.getElementById('loading')?.remove()"
+                    onerror="handleIframeError('${escapeHtml(name)}', '${escapeHtml(url)}')"
+                    allowfullscreen
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-pointer-lock allow-top-navigation-by-user-activation"
+                ></iframe>
+            `;
+
+            // 设置超时检测
+            setTimeout(() => {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="2" style="width: 60px; height: 60px; margin-bottom: 15px;">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <h3>加载超时</h3>
+                            <p style="margin: 10px 0;">${escapeHtml(name)} 拒绝连接或加载时间过长</p>
+                            <p style="font-size: 0.9em; color: #6c757d;">可能原因：该网站禁止在 iframe 中显示，或网络连接问题</p>
+                            <button onclick="window.open('${escapeHtml(url)}', '_blank')" class="btn btn-primary" style="margin-top: 10px;">在新窗口打开</button>
+                        </div>
+                    `;
+                }
+            }, 10000); // 10 秒超时
+        }
+
+        // 添加 URL
+        addUrlForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('siteName').value.trim();
+            const url = document.getElementById('siteUrl').value.trim();
+
+            if (!name || !url) {
+                alert('请填写完整信息');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/urls`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, url })
+                });
+
+                if (response.ok) {
+                    addUrlForm.reset();
+                    await loadUrls();
+                    alert('添加成功！');
+                } else {
+                    const data = await response.json();
+                    alert(data.error || '添加失败');
+                }
+            } catch (error) {
+                console.error('添加 URL 失败:', error);
+                alert('添加失败，请重试');
+            }
+        });
+
+        // 删除 URL
+        async function deleteUrl(event, id) {
+            event.stopPropagation();
+            
+            if (!confirm('确定要删除这个网站吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/urls/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    await loadUrls();
+                    alert('删除成功！');
+                } else {
+                    const data = await response.json();
+                    alert(data.error || '删除失败');
+                }
+            } catch (error) {
+                console.error('删除 URL 失败:', error);
+                alert('删除失败，请重试');
+            }
+        }
+
+        // 编辑 URL
+        async function editUrl(event, id) {
+            event.stopPropagation();
+            
+            const urlItem = event.target.closest('.url-item');
+            const nameElement = urlItem.querySelector('.url-item-name');
+            const urlElement = urlItem.querySelector('.url-item-url');
+            
+            const currentName = nameElement.textContent;
+            const currentUrl = urlElement.textContent;
+
+            const newName = prompt('修改网站名称:', currentName);
+            if (newName === null) return;
+            
+            const newUrl = prompt('修改网站地址:', currentUrl);
+            if (newUrl === null) return;
+
+            if (!newName || !newUrl) {
+                alert('名称和地址不能为空');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/urls/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: newName, url: newUrl })
+                });
+
+                if (response.ok) {
+                    await loadUrls();
+                    alert('更新成功！');
+                } else {
+                    const data = await response.json();
+                    alert(data.error || '更新失败');
+                }
+            } catch (error) {
+                console.error('更新 URL 失败:', error);
+                alert('更新失败，请重试');
+            }
+        }
+
+        // HTML 转义防止 XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // iframe 错误处理
+        function handleIframeError(name, url) {
+            console.error(`Failed to load ${name}: ${url}`);
+        }
+
+        // 检查 URL 可访问性
+        async function checkUrl(event, url, name) {
+            event.stopPropagation();
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '⏳';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/check-url?url=${encodeURIComponent(url)}`);
+                const data = await response.json();
+
+                if (data.accessible) {
+                    alert(`✅ ${name} 可以正常访问\n状态码：${data.status}\n支持 iframe: ${data.supportsIframe ? '是' : '否（该网站禁止在 iframe 中显示）'}`);
+                } else {
+                    alert(`❌ ${name} 无法访问\n原因：${data.message || data.error}`);
+                }
+            } catch (error) {
+                alert(`❌ 检查失败：${error.message}`);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // 移动端侧边栏切换
+        if (toggleSidebarBtn && window.innerWidth < 768) {
+            toggleSidebarBtn.addEventListener('click', () => {
+                const sidebar = document.querySelector('.sidebar');
+                sidebarVisible = !sidebarVisible;
+                sidebar.style.display = sidebarVisible ? 'block' : 'none';
+                toggleSidebarBtn.textContent = sidebarVisible ? '📱 隐藏侧边栏' : '📑 显示列表';
+            });
+
+            // 初始打开时先显示侧边栏
+            setTimeout(() => {
+                if (!sidebarVisible) {
+                    sidebar.style.display = 'block';
+                    sidebarVisible = true;
+                    toggleSidebarBtn.textContent = '📱 隐藏侧边栏';
+                }
+            }, 100);
+        }
+
+        // 页面加载时初始化
+        loadUrls();
+    </script>
+</body>
+</html>
