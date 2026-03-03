@@ -1,5 +1,5 @@
 node_modules/
-data/
+data/urls.json
 *.log
 .DS_Store
 .env
