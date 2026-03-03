@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>正在加载...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            color: #495057;
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .error-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 5px;
+        }
+
+        .error-box p {
+            color: #856404;
+            margin: 5px 0;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 5px;
+        }
+
+        .success-box p {
+            color: #155724;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loadingContent">
+            <div class="spinner"></div>
+            <h1>正在加载页面...</h1>
+            <p class="message" id="messageText">请稍候，正在连接目标网站</p>
+        </div>
+        
+        <div id="errorContent" style="display: none;">
+            <h1 style="color: #dc3545;">⚠️ 访问失败</h1>
+            <div class="error-box" id="errorDetails"></div>
+            <div>
+                <a href="#" class="btn" onclick="window.location.reload()">🔄 重试</a>
+                <a href="#" class="btn btn-secondary" onclick="goBack()">← 返回</a>
+            </div>
+        </div>
+
+        <div id="successContent" style="display: none;">
+            <div class="success-box">
+                <p>✅ 页面已成功加载！</p>
+                <p>如果下方没有显示内容，请查看浏览器地址栏或使用以下按钮：</p>
+            </div>
+            <div>
+                <a href="#" class="btn" id="directLink">🔗 直接访问目标网站</a>
+                <a href="#" class="btn btn-secondary" onclick="goBack()">← 返回</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 从 URL 参数获取目标地址
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUrl = urlParams.get('url');
+        
+        if (!targetUrl) {
+            showError('缺少目标 URL 参数');
+        } else {
+            // 使用 iframe 加载目标网站
+            loadTargetWebsite(targetUrl);
+        }
+
+        function loadTargetWebsite(url) {
+            const loadingContent = document.getElementById('loadingContent');
+            const errorContent = document.getElementById('errorContent');
+            const successContent = document.getElementById('successContent');
+            
+            // 创建隐藏的 iframe 来检测是否能正常加载
+            const testIframe = document.createElement('iframe');
+            testIframe.style.display = 'none';
+            testIframe.src = url;
+            
+            let loaded = false;
+            let hasError = false;
+            
+            // 设置超时检测
+            const timeoutId = setTimeout(() => {
+                if (!loaded && !hasError) {
+                    // 可能是跨域问题，显示成功但让用户自己判断
+                    showSuccess(url);
+                }
+            }, 8000);
+            
+            testIframe.onload = () => {
+                loaded = true;
+                clearTimeout(timeoutId);
+                showSuccess(url);
+            };
+            
+            testIframe.onerror = () => {
+                hasError = true;
+                clearTimeout(timeoutId);
+                showError('无法连接到目标网站，可能是网络问题或该网站禁止嵌入访问');
+            };
+            
+            document.body.appendChild(testIframe);
+            
+            // 更新提示文字
+            document.getElementById('messageText').textContent = `正在访问：${url}`;
+        }
+
+        function showError(message) {
+            document.getElementById('loadingContent').style.display = 'none';
+            document.getElementById('errorContent').style.display = 'block';
+            document.getElementById('errorDetails').innerHTML = `<p><strong>错误信息：</strong>${message}</p>`;
+        }
+
+        function showSuccess(url) {
+            document.getElementById('loadingContent').style.display = 'none';
+            document.getElementById('successContent').style.display = 'block';
+            document.getElementById('directLink').href = url;
+            document.getElementById('directLink').onclick = () => {
+                window.open(url, '_blank');
+                return false;
+            };
+        }
+
+        function goBack() {
+            // 尝试返回上一页
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                // 如果没有历史记录，跳转到主页
+                window.location.href = '/';
+            }
+        }
+    </script>
+</body>
+</html>

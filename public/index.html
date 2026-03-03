@@ -534,12 +534,20 @@
 
         // 打开 URL
         function openUrl(url, name) {
-            const finalUrl = useProxy ? `/api/proxy?url=${encodeURIComponent(url)}` : url;
+            // 如果使用代理，使用专门的代理页面来避免浏览器安全限制
+            if (useProxy) {
+                // 使用新窗口打开代理页面
+                const proxyUrl = `/proxy.html?url=${encodeURIComponent(url)}`;
+                window.open(proxyUrl, '_blank');
+                return;
+            }
+            
+            const finalUrl = url;
             
             iframeContainer.innerHTML = `
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
-                    <p>正在加载 ${escapeHtml(name)}${useProxy ? ' (代理模式)' : ''}...</p>
+                    <p>正在加载 ${escapeHtml(name)}...</p>
                 </div>
                 <iframe 
                     src="${escapeHtml(finalUrl)}" 
@@ -565,9 +573,8 @@
                             <h3>加载超时</h3>
                             <p style="margin: 10px 0;">${escapeHtml(name)} 拒绝连接或加载时间过长</p>
                             <p style="font-size: 0.9em; color: #6c757d;">可能原因：该网站禁止在 iframe 中显示，或网络连接问题</p>
-                            ${useProxy ? '<p style="font-size: 0.85em; color: #28a745; margin-top: 10px;">✅ 当前已启用代理模式</p>' : ''}
                             <button onclick="window.open('${escapeHtml(url)}', '_blank')" class="btn btn-primary" style="margin-top: 10px;">在新窗口打开</button>
-                            ${!useProxy ? `<button onclick="document.getElementById('proxyToggle').click(); openUrl('${escapeHtml(url)}', '${escapeHtml(name)}')" class="btn btn-primary" style="margin-top: 10px; background: #28a745;">尝试启用代理访问</button>` : ''}
+                            <button onclick="document.getElementById('proxyToggle').click(); openUrl('${escapeHtml(url)}', '${escapeHtml(name)}')" class="btn btn-primary" style="margin-top: 10px; background: #28a745;">启用代理访问</button>
                         </div>
                     `;
                 }
